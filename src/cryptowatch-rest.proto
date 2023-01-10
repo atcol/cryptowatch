@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package cryptowatch.rest.models;
+
+message Allowance {
+  float cost = 1;
+  float remaining = 2;
+}
+
+message Exchange {
+
+  uint64 id = 1;
+  string symbol = 2;
+  string name = 3;
+  bool active = 5;
+  
+}
+
+message Market {
+  uint64 id = 1;
+  string exchange = 2;
+  string pair = 3;
+  bool active = 4;
+}
