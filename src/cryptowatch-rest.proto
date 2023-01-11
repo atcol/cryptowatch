@@ -7,6 +7,11 @@ message Allowance {
   float remaining = 2;
 }
 
+message Cursor {
+  string last = 1;
+  bool hasMore = 2;
+}
+
 message Exchange {
   uint64 id = 1;
   string symbol = 2;
