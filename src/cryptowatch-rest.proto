@@ -8,12 +8,10 @@ message Allowance {
 }
 
 message Exchange {
-
   uint64 id = 1;
   string symbol = 2;
   string name = 3;
   bool active = 5;
-  
 }
 
 message Market {
@@ -21,4 +19,27 @@ message Market {
   string exchange = 2;
   string pair = 3;
   bool active = 4;
+}
+
+message Price {
+  float price = 1;
+}
+
+message Delta {
+  float percentage = 1;
+  float absolute = 2;
+}
+
+// Open-high-low-close and delta for a time window.
+message Candle {
+  float last = 1;
+  float high = 2;
+  float low = 3;
+  Delta change = 4;
+}
+
+message MarketSummary {
+  Candle price = 1; 
+  float volume = 2;
+  float volumeQuote = 3;
 }

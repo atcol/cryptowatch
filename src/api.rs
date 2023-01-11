@@ -1,5 +1,5 @@
 use self::rest::{
-    models::{Exchange, Market},
+    models::{Exchange, Market, MarketSummary},
     RESTResponse,
 };
 
@@ -36,6 +36,23 @@ impl MarketAPI {
             .expect("Failed to serialise markets response to JSON");
         if let Some(markets) = resp.result {
             Ok(serde_json::from_value(markets).expect("Not a markets response"))
+        } else if let Some(error) = resp.error {
+            Err(error.clone())
+        } else {
+            Err("No normal or error response available".into())
+        }
+    }
+
+    pub async fn summary(&self, exchange: &str, pair: &str) -> Result<MarketSummary, String> {
+        let url = format!("{}/markets/{}/{}/summary", self.base_url, exchange, pair);
+        let resp: RESTResponse = reqwest::get(url)
+            .await
+            .expect("Failed to get market summary")
+            .json()
+            .await
+            .expect("Failed to serialise market summary response to JSON");
+        if let Some(summary) = resp.result {
+            Ok(serde_json::from_value(summary).expect("Not a market summary response"))
         } else if let Some(error) = resp.error {
             Err(error.clone())
         } else {
