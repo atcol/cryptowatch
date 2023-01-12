@@ -1,4 +1,5 @@
-use cryptowatch::api::rest::models::{MarketSummary, Market};
+use std::time::{SystemTime, UNIX_EPOCH};
+use cryptowatch::api::rest::models::{MarketSummary, Market, Price, Trade};
 use cryptowatch::api::rest::MarketsResultPage;
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 
@@ -21,7 +22,7 @@ async fn test_markets() {
 }
 
 #[tokio::test]
-async fn test_market_summary() {
+async fn test_summary() {
     let api = Cryptowatch::default();
     let summary: MarketSummary = api.market().summary("kraken", "btcgbp").await.unwrap();
 
@@ -37,11 +38,38 @@ async fn test_market_summary() {
 }
 
 #[tokio::test]
-async fn test_market_details() {
+async fn test_details() {
     let api = Cryptowatch::default();
     let summary: Market = api.market().details("kraken", "btcgbp").await.unwrap();
     assert_eq!(88, summary.id);
     assert_eq!("kraken", summary.exchange);
     assert_eq!("btcgbp", summary.pair);
     assert_eq!(true, summary.active);
+}
+
+#[tokio::test]
+async fn test_price() {
+    let api = Cryptowatch::default();
+    let price: Price = api.market().price("kraken", "btcgbp").await.unwrap();
+    assert!(price.price > 0.);
+}
+
+#[tokio::test]
+async fn test_trades() {
+    let api = Cryptowatch::default();
+    let trades: Vec<Trade> = api.market().trades("kraken", "btcgbp").await.unwrap();
+    assert!(trades.len() > 0);
+
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    for trade in trades.iter() {
+        assert!(trade.id >= 0.);
+        assert!(trade.price > 0.);
+        assert!(u128::from(trade.timestamp) <= since_the_epoch);
+        assert!(trade.amount > 0.);
+    }
 }

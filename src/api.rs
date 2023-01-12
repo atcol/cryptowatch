@@ -3,7 +3,7 @@ use self::rest::{ExchangeAPI, MarketAPI};
 pub mod markets;
 
 pub mod rest {
-    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary};
+    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Price, Trade};
 
     #[derive(serde::Deserialize)]
     #[serde()]
@@ -88,6 +88,40 @@ pub mod rest {
                 .expect("Failed to serialise market summary response to JSON");
             if let Some(market) = resp.result {
                 Ok(serde_json::from_value(market).expect("Not a market response"))
+            } else if let Some(error) = resp.error {
+                Err(error.clone())
+            } else {
+                Err("No normal or error response available".into())
+            }
+        }
+
+        pub async fn price(&self, exchange: &str, pair: &str) -> Result<Price, String> {
+            let url = format!("{}/markets/{}/{}/price", self.base_url, exchange, pair);
+            let resp: RESTResponse = reqwest::get(url)
+                .await
+                .expect("Failed to get price")
+                .json()
+                .await
+                .expect("Failed to serialise market summary response to JSON");
+            if let Some(price) = resp.result {
+                Ok(serde_json::from_value(price).expect("Not a price response"))
+            } else if let Some(error) = resp.error {
+                Err(error.clone())
+            } else {
+                Err("No normal or error response available".into())
+            }
+        }
+
+        pub async fn trades(&self, exchange: &str, pair: &str) -> Result<Vec<Trade>, String> {
+            let url = format!("{}/markets/{}/{}/trades", self.base_url, exchange, pair);
+            let resp: RESTResponse = reqwest::get(url)
+                .await
+                .expect("Failed to get trades")
+                .json()
+                .await
+                .expect("Failed to serialise market summary response to JSON");
+            if let Some(trades) = resp.result {
+                Ok(serde_json::from_value(trades).expect("Not a trades response"))
             } else if let Some(error) = resp.error {
                 Err(error.clone())
             } else {

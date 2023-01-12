@@ -48,3 +48,10 @@ message MarketSummary {
   float volume = 2;
   float volumeQuote = 3;
 }
+
+message Trade {
+  float id = 1;
+  uint32 timestamp = 2;
+  float price = 3;
+  float amount = 4;
+}
