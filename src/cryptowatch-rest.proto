@@ -64,5 +64,6 @@ message Level {
 message Orderbook {
   repeated Level asks = 1;
   repeated Level bids = 2;
+  uint64 seqNum = 3;
 }
 
