@@ -1,4 +1,4 @@
-use cryptowatch::api::{Cryptowatch, CryptowatchAPI, rest::models::Price};
+use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 
 #[tokio::main]
 async fn main() {
@@ -8,7 +8,6 @@ async fn main() {
         cw.market().orderbook("binance-us", "btcusdt"),
         cw.market().orderbook("okx", "btcusdt")
     ]).await;
-
 
     for result in results.into_iter().map(|r| r.unwrap()) {
         let top_ask = &result.asks[0];
