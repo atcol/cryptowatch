@@ -23,7 +23,7 @@ pub mod rest {
     }
 
     #[derive(Debug)]
-    pub struct MarketPage {
+    pub struct MarketsResultPage {
         pub cursor: Option<Cursor>,
         pub markets: Vec<Market>,
     }
@@ -33,7 +33,7 @@ pub mod rest {
             Self { base_url }
         }
 
-        pub async fn list(&self, cursor: Option<Cursor>) -> Result<MarketPage, String> {
+        pub async fn list(&self, cursor: Option<Cursor>) -> Result<MarketsResultPage, String> {
             let url = if let Some(c) = cursor {
                 if c.has_more {
                     format!("{}/markets?cursor={}", self.base_url, c.last)
@@ -50,7 +50,7 @@ pub mod rest {
                 .await
                 .expect("Failed to serialise markets response to JSON");
             if let Some(markets) = resp.result {
-                Ok(MarketPage {
+                Ok(MarketsResultPage {
                     cursor: resp.cursor,
                     markets: serde_json::from_value(markets).expect("Not a markets response"),
                 })
@@ -71,6 +71,23 @@ pub mod rest {
                 .expect("Failed to serialise market summary response to JSON");
             if let Some(summary) = resp.result {
                 Ok(serde_json::from_value(summary).expect("Not a market summary response"))
+            } else if let Some(error) = resp.error {
+                Err(error.clone())
+            } else {
+                Err("No normal or error response available".into())
+            }
+        }
+
+        pub async fn details(&self, exchange: &str, pair: &str) -> Result<Market, String> {
+            let url = format!("{}/markets/{}/{}", self.base_url, exchange, pair);
+            let resp: RESTResponse = reqwest::get(url)
+                .await
+                .expect("Failed to get market")
+                .json()
+                .await
+                .expect("Failed to serialise market summary response to JSON");
+            if let Some(market) = resp.result {
+                Ok(serde_json::from_value(market).expect("Not a market response"))
             } else if let Some(error) = resp.error {
                 Err(error.clone())
             } else {
