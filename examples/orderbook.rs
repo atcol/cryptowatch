@@ -9,9 +9,10 @@ async fn main() {
         cw.market().orderbook("okx", "btcusdt")
     ]).await;
 
-    for result in results.into_iter().map(|r| r.unwrap()) {
-        let top_ask = &result.asks[0];
-        let top_bid = &result.bids[0];
-        println!("Result is {:?} {:?}", top_ask, top_bid);
+    for orderbook in results.into_iter().map(|r| r.unwrap()) {
+        let top_ask = orderbook.top_ask();
+        let top_bid = orderbook.top_bid();
+        let spread = orderbook.spread();
+        println!("Result is {:?} {:?} {:?}", top_ask, top_bid, spread);
     }
 }

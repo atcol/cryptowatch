@@ -4,20 +4,19 @@
 
 Unofficial Cryptowatch Rust SDK
 
-
-
 ## Examples
 
 #### Kraken Orderbook
 
-```
+```rust
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 
 #[tokio::main]
 async fn main() {
     let cw = Cryptowatch::default();
     let results = cw.market().orderbook("kraken","btcusd").await.unwrap();
-    // Do something with results...
+    let top_ask = &result.top_ask();
+    let top_bid = &result.top_bid();
 }
 
 ```

@@ -18,7 +18,46 @@ pub mod rest {
     }
 
     pub mod models {
+
         include!(concat!(env!("OUT_DIR"), "/cryptowatch.rest.models.rs"));
+
+        impl Orderbook {
+
+            /// ```
+            /// use cryptowatch::api::rest::models::{Level, Orderbook};
+            /// let ob = Orderbook { 
+            ///     seq_num: 0, 
+            ///     asks: vec![Level { price: 1000.,  amount: 1. }], 
+            ///     bids: vec![Level { price: 999.,   amount:   1. }] 
+            /// };
+            /// assert_eq!(ob.spread(), Some(1.));
+            pub fn spread(&self) -> Option<f32> {
+                let ask = self.top_ask().map(|a| a.price)?;
+                let bid = self.top_bid().map(|a| a.price)?;
+
+                Some(ask - bid)
+            }
+
+            /// The ask.
+            /// ```
+            /// use cryptowatch::api::rest::models::Orderbook;
+            /// let ob = Orderbook { seq_num: 0, asks: vec![], bids: vec![] };
+            /// assert!(ob.top_ask().is_none());
+            /// ```
+            pub fn top_ask(&self) -> Option<Level> {
+                self.asks.get(0).cloned()
+            }
+
+            /// The bid.
+            /// ```
+            /// use cryptowatch::api::rest::models::Orderbook;
+            /// let ob = Orderbook { seq_num: 0, asks: vec![], bids: vec![] };
+            /// assert!(ob.top_bid().is_none());
+            /// ```
+            pub fn top_bid(&self) -> Option<Level> {
+                self.bids.get(0).cloned()
+            }
+        }
     }
 
     /// A wrapper for the Market resource and its operations
@@ -92,6 +131,7 @@ pub mod rest {
 
     }
 
+    /// A wrapper for the Exchange resource and its operations
     pub struct ExchangeAPI {
         base_url: &'static str,
     }
@@ -133,14 +173,16 @@ pub mod rest {
             Err("No normal or error response available".into())
         }
     }
-
-
 }
 
+/// Entrypoint for REST API resources
 #[async_trait::async_trait]
 pub trait CryptowatchAPI {
+
+    /// Get the MarketAPI
     fn market(&self) -> MarketAPI;
 
+    /// Get the ExchangeAPI
     fn exchange(&self) -> ExchangeAPI;
 }
 
