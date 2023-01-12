@@ -55,3 +55,14 @@ message Trade {
   float price = 3;
   float amount = 4;
 }
+
+message Level {
+  float price = 1;
+  float amount = 2;
+}
+
+message Orderbook {
+  repeated Level asks = 1;
+  repeated Level bids = 2;
+}
+
