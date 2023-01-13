@@ -1,4 +1,4 @@
-use self::rest::{ExchangeAPI, MarketAPI};
+use self::rest::{ExchangeAPI, MarketAPI, PairsAPI};
 
 pub mod markets;
 
@@ -7,7 +7,7 @@ pub mod rest {
 
     use reqwest::IntoUrl;
 
-    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Orderbook, Price, Trade, Candle};
+    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Orderbook, Price, Trade, Candle, Pair};
     use serde::de::DeserializeOwned;
 
     #[derive(serde::Deserialize)]
@@ -59,6 +59,34 @@ pub mod rest {
             pub fn top_bid(&self) -> Option<Level> {
                 self.bids.get(0).cloned()
             }
+        }
+    }
+
+    pub struct PagedResult<T> {
+        pub cursor: Option<Cursor>,
+        pub result: T,
+    }
+
+    /// A wrapper for the Pair resource and its operations
+    pub struct PairsAPI {
+        pub(crate) base_url: &'static str,
+    }
+
+    impl PairsAPI {
+
+        pub async fn list(&self, cursor: Option<Cursor>) -> Result<PagedResult<Vec<Pair>>, String> {
+            let url = if let Some(c) = cursor {
+                format!("{}/pairs?cursor={}", self.base_url, c.last)
+            } else {
+                format!("{}/pairs", self.base_url,)
+            };
+
+            let resp = http_get(url).await?;
+
+            Ok(PagedResult {
+                cursor: resp.cursor.clone(),
+                result: convert_response(resp)?,
+            })
         }
     }
 
@@ -204,11 +232,15 @@ pub mod rest {
         let resp = http_get(url).await?;
         convert_response(resp)
     }
+
 }
 
 /// Entrypoint for REST API resources
 #[async_trait::async_trait]
 pub trait CryptowatchAPI {
+
+    /// Get the PairsAPI
+    fn pairs(&self) -> PairsAPI;
 
     /// Get the MarketAPI
     fn market(&self) -> MarketAPI;
@@ -250,6 +282,10 @@ impl Default for Cryptowatch {
 
 #[async_trait::async_trait]
 impl CryptowatchAPI for Cryptowatch {
+    fn pairs(&self) -> PairsAPI {
+        PairsAPI { base_url: self.base_url.clone() }
+    }
+
     fn market(&self) -> MarketAPI {
         MarketAPI::new(self.base_url.clone())
     }

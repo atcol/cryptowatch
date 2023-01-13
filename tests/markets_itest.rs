@@ -82,7 +82,7 @@ async fn test_trades() {
     let since_the_epoch = start.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
     for trade in trades.iter() {
-        assert!(trade.id >= 0.);
+        assert!(trade.id >= 1);
         assert!(trade.price > 0.);
         assert!(u128::from(trade.timestamp) <= since_the_epoch);
         assert!(trade.amount > 0.);

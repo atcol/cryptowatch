@@ -50,7 +50,7 @@ message MarketSummary {
 }
 
 message Trade {
-  float id = 1;
+  uint64 id = 1;
   uint32 timestamp = 2;
   float price = 3;
   float amount = 4;
@@ -75,4 +75,19 @@ message Candle {
   float closePrice = 5;
   float volume = 6;
   float quoteVolume = 7;
+}
+
+message Symbol {
+  uint64 id = 1;
+  string sid = 2;
+  string symbol = 3;
+  string name = 4;
+  bool fiat = 5;
+}
+
+message Pair {
+  uint64 id = 1;
+  string symbol = 2;
+  Symbol base = 3;
+  Symbol quote = 4;
 }
