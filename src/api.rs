@@ -3,9 +3,11 @@ use self::rest::{ExchangeAPI, MarketAPI};
 pub mod markets;
 
 pub mod rest {
+    use std::collections::HashMap;
+
     use reqwest::IntoUrl;
 
-    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Orderbook, Price, Trade};
+    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Orderbook, Price, Trade, Candle};
     use serde::de::DeserializeOwned;
 
     #[derive(serde::Deserialize)]
@@ -129,6 +131,10 @@ pub mod rest {
             request(url).await
         }
 
+        pub async fn ohlc(&self, exchange: &str, pair: &str) -> Result<HashMap<String, Vec<Candle>>, String> {
+            let url = format!("{}/markets/{}/{}/ohlc", self.base_url, exchange, pair);
+            request(url).await
+        }
     }
 
     /// A wrapper for the Exchange resource and its operations

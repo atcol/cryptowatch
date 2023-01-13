@@ -35,8 +35,8 @@ message Delta {
   float absolute = 2;
 }
 
-// Open-high-low-close and delta for a time window.
-message Candle {
+// Candle-like price delta for a time window.
+message PriceSummary {
   float last = 1;
   float high = 2;
   float low = 3;
@@ -44,7 +44,7 @@ message Candle {
 }
 
 message MarketSummary {
-  Candle price = 1; 
+  PriceSummary price = 1; 
   float volume = 2;
   float volumeQuote = 3;
 }
@@ -67,3 +67,12 @@ message Orderbook {
   uint64 seqNum = 3;
 }
 
+message Candle {
+  float closeTime = 1;
+  float openPrice = 2;
+  float highPrice = 3;
+  float lowPrice = 4;
+  float closePrice = 5;
+  float volume = 6;
+  float quoteVolume = 7;
+}

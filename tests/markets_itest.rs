@@ -1,7 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-use cryptowatch::api::rest::models::{MarketSummary, Market, Price, Trade};
+use cryptowatch::api::rest::models::{Market, MarketSummary, Price, Trade, Candle};
 use cryptowatch::api::rest::MarketsResultPage;
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[tokio::test]
 async fn test_markets() {
@@ -17,8 +18,10 @@ async fn test_markets() {
 
     let page2: MarketsResultPage = api.market().list(page1.cursor).await.unwrap();
     assert_ne!(0, page2.markets.len());
-    assert_eq!(page2.cursor.as_ref().map(|c| c.has_more).unwrap_or(false), false);
-
+    assert_eq!(
+        page2.cursor.as_ref().map(|c| c.has_more).unwrap_or(false),
+        false
+    );
 }
 
 #[tokio::test]
@@ -61,10 +64,7 @@ async fn test_trades() {
     assert!(trades.len() > 0);
 
     let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+    let since_the_epoch = start.duration_since(UNIX_EPOCH).unwrap().as_millis();
 
     for trade in trades.iter() {
         assert!(trade.id >= 0.);
@@ -72,4 +72,26 @@ async fn test_trades() {
         assert!(u128::from(trade.timestamp) <= since_the_epoch);
         assert!(trade.amount > 0.);
     }
+}
+
+#[tokio::test]
+async fn test_ohlc() {
+    let api = Cryptowatch::default();
+    let ohlc: HashMap<String, Vec<Candle>> = api.market().ohlc("kraken", "btcgbp").await.unwrap();
+    assert!(ohlc.len() > 0);
+
+    assert!(ohlc.get("60").unwrap().len() > 0); //  1m
+    assert!(ohlc.get("180").unwrap().len() > 0); // 3m
+    assert!(ohlc.get("300").unwrap().len() > 0); // 5m
+    assert!(ohlc.get("900").unwrap().len() > 0); // 15m
+    assert!(ohlc.get("1800").unwrap().len() > 0); // 30m
+    assert!(ohlc.get("3600").unwrap().len() > 0); // 1h
+    assert!(ohlc.get("7200").unwrap().len() > 0); // 2h
+    assert!(ohlc.get("14400").unwrap().len() > 0); // 4h
+    assert!(ohlc.get("21600").unwrap().len() > 0); // 6h
+    assert!(ohlc.get("43200").unwrap().len() > 0); // 12h
+    assert!(ohlc.get("86400").unwrap().len() > 0); // 1d
+    assert!(ohlc.get("259200").unwrap().len() > 0); // 3d
+    assert!(ohlc.get("604800").unwrap().len() > 0); // 1w
+    assert!(ohlc.get("604800_Monday").unwrap().len() > 0); // 1w (weekly start Monday)
 }
