@@ -1,5 +1,5 @@
-use cryptowatch::api::rest::models::{Market, MarketSummary, Price, Trade, Candle};
-use cryptowatch::api::rest::MarketsResultPage;
+use cryptowatch::api::rest::models::{Candle, Market, MarketSummary, Price, Trade};
+use cryptowatch::api::rest::{MarketsResultPage, PricesResultPage};
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -55,6 +55,21 @@ async fn test_price() {
     let api = Cryptowatch::default();
     let price: Price = api.market().price("kraken", "btcgbp").await.unwrap();
     assert!(price.price > 0.);
+}
+
+#[tokio::test]
+async fn test_prices() {
+    let api = Cryptowatch::default();
+    let page: PricesResultPage = api.market().prices(None).await.unwrap();
+    assert!(page.cursor.is_some());
+    assert!(!page.cursor.as_ref().unwrap().has_more);
+    assert!(page.prices.len() > 0);
+
+    let page2: PricesResultPage = api.market().prices(page.cursor).await.unwrap();
+    assert!(page2.cursor.is_some());
+    assert!(!page2.cursor.as_ref().unwrap().has_more);
+    assert!(page2.prices.len() == 0);
+    
 }
 
 #[tokio::test]

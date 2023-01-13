@@ -73,6 +73,12 @@ pub mod rest {
         pub markets: Vec<Market>,
     }
 
+    #[derive(Debug)]
+    pub struct PricesResultPage {
+        pub cursor: Option<Cursor>,
+        pub prices: HashMap<String, f32>,
+    }
+
     impl MarketAPI {
         pub(crate) fn new(base_url: &'static str) -> Self {
             Self { base_url }
@@ -88,12 +94,7 @@ pub mod rest {
             } else {
                 format!("{}/markets", self.base_url)
             };
-            let resp: RESTResponse = reqwest::get(url)
-                .await
-                .expect("Failed to get markets")
-                .json()
-                .await
-                .expect("Failed to serialise markets response to JSON");
+            let resp = http_get(url).await?;
             if let Some(markets) = resp.result {
                 Ok(MarketsResultPage {
                     cursor: resp.cursor,
@@ -119,6 +120,21 @@ pub mod rest {
         pub async fn price(&self, exchange: &str, pair: &str) -> Result<Price, String> {
             let url = format!("{}/markets/{}/{}/price", self.base_url, exchange, pair);
             request(url).await
+        }
+
+        pub async fn prices(&self, cursor: Option<Cursor>) -> Result<PricesResultPage, String> {
+            let url = if let Some(c) = cursor {
+                format!("{}/markets/prices?cursor={}", self.base_url, c.last)
+            } else {
+                format!("{}/markets/prices", self.base_url,)
+            };
+
+            let resp = http_get(url).await?;
+
+            Ok(PricesResultPage {
+                cursor: resp.cursor.clone(),
+                prices: convert_response(resp)?,
+            })
         }
 
         pub async fn trades(&self, exchange: &str, pair: &str) -> Result<Vec<Trade>, String> {
@@ -163,21 +179,30 @@ pub mod rest {
         }
     }
 
-    /// Generic helper for HTTP GET and JSON response parsing
-    async fn request<U: IntoUrl, T: DeserializeOwned>(url: U, ) -> Result<T, String> {
-        let resp: RESTResponse = reqwest::get(url)
+    async fn http_get<U: IntoUrl>(url: U, ) -> Result<RESTResponse, String> {
+        Ok(reqwest::get(url)
             .await
             .expect("Failed get request")
             .json()
             .await
-            .expect("Failed to serialise response to JSON");
-        if let Some(trades) = resp.result {
-            Ok(serde_json::from_value(trades).expect("Unexpected response"))
+            .expect("Failed to serialise response to JSON"))
+    }
+
+    /// Generic helper for parsing the response variants from the CW API
+    fn convert_response<T: DeserializeOwned>(resp: RESTResponse) -> Result<T, String> {
+        if let Some(v) = resp.result {
+            Ok(serde_json::from_value(v).expect("Unexpected response"))
         } else if let Some(error) = resp.error {
             Err(error.clone())
         } else {
             Err("No normal or error response available".into())
         }
+    }
+
+    /// Generic helper for HTTP GET and JSON response parsing
+    async fn request<U: IntoUrl, T: DeserializeOwned>(url: U, ) -> Result<T, String> {
+        let resp = http_get(url).await?;
+        convert_response(resp)
     }
 }
 
