@@ -15,10 +15,8 @@ use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 async fn main() {
     let cw = Cryptowatch::default();
     let results = cw.market().orderbook("kraken","btcusd").await.unwrap();
-    let top_ask = &result.top_ask();
-    let top_bid = &result.top_bid();
+    let top_ask = results.top_ask();
+    let top_bid = results.top_bid();
 }
-
 ```
-
 
