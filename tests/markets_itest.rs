@@ -1,4 +1,5 @@
 use cryptowatch::api::rest::models::{Candle, Market, MarketSummary, Price, Trade};
+use cryptowatch::api::rest::{Details, List, PagedResult};
 use cryptowatch::api::rest::{MarketsResultPage, PricesResultPage};
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 use std::collections::HashMap;
@@ -7,17 +8,17 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[tokio::test]
 async fn test_markets() {
     let api = Cryptowatch::default();
-    let page1: MarketsResultPage = api.market().list(None).await.unwrap();
-    assert_ne!(0, page1.markets.len());
+    let page1: PagedResult<Vec<Market>> = api.market().list(None).await.unwrap();
+    assert_ne!(0, page1.result.len());
     assert!(page1.cursor.as_ref().map(|c| c.has_more).unwrap_or(false));
-    let pairs1: Vec<String> = page1.markets.into_iter().map(|m| m.pair).collect();
+    let pairs1: Vec<String> = page1.result.into_iter().map(|m| m.pair).collect();
 
     for pair in vec!["btcgbp", "btceur", "btcusd"].into_iter() {
         assert!(pairs1.contains(&pair.to_owned()), "Missing {}", pair);
     }
 
-    let page2: MarketsResultPage = api.market().list(page1.cursor).await.unwrap();
-    assert_ne!(0, page2.markets.len());
+    let page2: PagedResult<Vec<Market>> = api.market().list(page1.cursor).await.unwrap();
+    assert_ne!(0, page2.result.len());
     assert_eq!(
         page2.cursor.as_ref().map(|c| c.has_more).unwrap_or(false),
         false
@@ -69,7 +70,6 @@ async fn test_prices() {
     assert!(page2.cursor.is_some());
     assert!(!page2.cursor.as_ref().unwrap().has_more);
     assert!(page2.prices.len() == 0);
-    
 }
 
 #[tokio::test]

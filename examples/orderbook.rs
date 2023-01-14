@@ -4,10 +4,11 @@ use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 async fn main() {
     let cw = Cryptowatch::default();
     let results = futures::future::join_all(vec![
-        cw.market().orderbook("kraken","btcusd"),
+        cw.market().orderbook("kraken", "btcusd"),
         cw.market().orderbook("binance-us", "btcusdt"),
-        cw.market().orderbook("okx", "btcusdt")
-    ]).await;
+        cw.market().orderbook("okx", "btcusdt"),
+    ])
+    .await;
 
     for orderbook in results.into_iter().map(|r| r.unwrap()) {
         let top_ask = orderbook.top_ask();

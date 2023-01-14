@@ -5,32 +5,27 @@ pub mod markets;
 pub mod rest {
     use std::collections::HashMap;
 
+    use async_trait::async_trait;
     use reqwest::IntoUrl;
 
-    use self::models::{Allowance, Cursor, Exchange, Market, MarketSummary, Orderbook, Price, Trade, Candle, Pair};
+    use self::models::{
+        Allowance, Candle, Cursor, Exchange, Market, MarketSummary, Orderbook, Pair, Price, Trade,
+    };
     use serde::de::DeserializeOwned;
 
-    #[derive(serde::Deserialize)]
-    #[serde()]
-    pub struct RESTResponse {
-        pub allowance: Allowance,
-        pub cursor: Option<Cursor>,
-        pub error: Option<String>,
-        pub result: Option<serde_json::Value>,
-    }
+    static CW_BASE_URL: &str = "https://api.cryptowat.ch";
 
     pub mod models {
 
         include!(concat!(env!("OUT_DIR"), "/cryptowatch.rest.models.rs"));
 
         impl Orderbook {
-
             /// ```
             /// use cryptowatch::api::rest::models::{Level, Orderbook};
-            /// let ob = Orderbook { 
-            ///     seq_num: 0, 
-            ///     asks: vec![Level { price: 1000.,  amount: 1. }], 
-            ///     bids: vec![Level { price: 999.,   amount:   1. }] 
+            /// let ob = Orderbook {
+            ///     seq_num: 0,
+            ///     asks: vec![Level { price: 1000.,  amount: 1. }],
+            ///     bids: vec![Level { price: 999.,   amount:   1. }]
             /// };
             /// assert_eq!(ob.spread(), Some(1.));
             pub fn spread(&self) -> Option<f32> {
@@ -62,23 +57,21 @@ pub mod rest {
         }
     }
 
-    pub struct PagedResult<T> {
-        pub cursor: Option<Cursor>,
-        pub result: T,
+    pub trait HasURI {
+        fn uri(&self) -> String;
     }
 
-    /// A wrapper for the Pair resource and its operations
-    pub struct PairsAPI {
-        pub(crate) base_url: &'static str,
-    }
-
-    impl PairsAPI {
-
-        pub async fn list(&self, cursor: Option<Cursor>) -> Result<PagedResult<Vec<Pair>>, String> {
+    #[async_trait::async_trait]
+    pub trait List<T>: HasURI
+    where
+        T: DeserializeOwned,
+    {
+        /// Return a paged collection of results, optionally starting from the given cursor
+        async fn list(&self, cursor: Option<Cursor>) -> Result<PagedResult<Vec<T>>, String> {
             let url = if let Some(c) = cursor {
-                format!("{}/pairs?cursor={}", self.base_url, c.last)
+                format!("{}/{}?cursor={}", CW_BASE_URL, self.uri(), c.last)
             } else {
-                format!("{}/pairs", self.base_url,)
+                format!("{}/{}", CW_BASE_URL, self.uri())
             };
 
             let resp = http_get(url).await?;
@@ -88,16 +81,59 @@ pub mod rest {
                 result: convert_response(resp)?,
             })
         }
+    }
 
-        pub async fn details(&self, pair: &str) -> Result<Pair, String> {
-            request(format!("{}/pairs/{}", self.base_url, pair)).await
+    #[async_trait::async_trait]
+    pub trait Details<T>: HasURI
+    where
+        T: DeserializeOwned,
+    {
+        async fn details(&self, value: &str) -> Result<T, String> {
+            request(format!("{}/{}/{}", CW_BASE_URL, self.uri(), value)).await
         }
     }
 
-    /// A wrapper for the Market resource and its operations
-    pub struct MarketAPI {
-        base_url: &'static str,
+    #[derive(serde::Deserialize)]
+    #[serde()]
+    pub struct RESTResponse {
+        pub allowance: Allowance,
+        pub cursor: Option<Cursor>,
+        pub error: Option<String>,
+        pub result: Option<serde_json::Value>,
     }
+
+    pub struct PagedResult<T> {
+        pub cursor: Option<Cursor>,
+        pub result: T,
+    }
+
+    pub struct AssetsAPI {}
+
+    /// A wrapper for the Pair resource and its operations
+    pub struct PairsAPI {}
+
+    /// A wrapper for the Market resource and its operations
+    pub struct MarketAPI {}
+
+    impl HasURI for PairsAPI {
+        fn uri(&self) -> String {
+            "pairs".to_string()
+        }
+    }
+
+    impl List<Pair> for PairsAPI {}
+
+    impl Details<Pair> for PairsAPI {}
+
+    impl HasURI for MarketAPI {
+        fn uri(&self) -> String {
+            "markets".to_string()
+        }
+    }
+
+    impl List<Market> for MarketAPI {}
+
+    impl Details<Market> for MarketAPI {}
 
     #[derive(Debug)]
     pub struct MarketsResultPage {
@@ -112,53 +148,30 @@ pub mod rest {
     }
 
     impl MarketAPI {
-        pub(crate) fn new(base_url: &'static str) -> Self {
-            Self { base_url }
-        }
-
-        pub async fn list(&self, cursor: Option<Cursor>) -> Result<MarketsResultPage, String> {
-            let url = if let Some(c) = cursor {
-                if c.has_more {
-                    format!("{}/markets?cursor={}", self.base_url, c.last)
-                } else {
-                    format!("{}/markets", self.base_url)
-                }
-            } else {
-                format!("{}/markets", self.base_url)
-            };
-            let resp = http_get(url).await?;
-            if let Some(markets) = resp.result {
-                Ok(MarketsResultPage {
-                    cursor: resp.cursor,
-                    markets: serde_json::from_value(markets).expect("Not a markets response"),
-                })
-            } else if let Some(error) = resp.error {
-                Err(error.clone())
-            } else {
-                Err("No normal or error response available".into())
-            }
+        pub(crate) fn new() -> Self {
+            Self {}
         }
 
         pub async fn summary(&self, exchange: &str, pair: &str) -> Result<MarketSummary, String> {
-            let url = format!("{}/markets/{}/{}/summary", self.base_url, exchange, pair);
+            let url = format!("{}/markets/{}/{}/summary", CW_BASE_URL, exchange, pair);
             request(url).await
         }
 
         pub async fn details(&self, exchange: &str, pair: &str) -> Result<Market, String> {
-            let url = format!("{}/markets/{}/{}", self.base_url, exchange, pair);
+            let url = format!("{}/markets/{}/{}", CW_BASE_URL, exchange, pair);
             request(url).await
         }
 
         pub async fn price(&self, exchange: &str, pair: &str) -> Result<Price, String> {
-            let url = format!("{}/markets/{}/{}/price", self.base_url, exchange, pair);
+            let url = format!("{}/markets/{}/{}/price", CW_BASE_URL, exchange, pair);
             request(url).await
         }
 
         pub async fn prices(&self, cursor: Option<Cursor>) -> Result<PricesResultPage, String> {
             let url = if let Some(c) = cursor {
-                format!("{}/markets/prices?cursor={}", self.base_url, c.last)
+                format!("{}/markets/prices?cursor={}", CW_BASE_URL, c.last)
             } else {
-                format!("{}/markets/prices", self.base_url,)
+                format!("{}/markets/prices", CW_BASE_URL,)
             };
 
             let resp = http_get(url).await?;
@@ -170,48 +183,46 @@ pub mod rest {
         }
 
         pub async fn trades(&self, exchange: &str, pair: &str) -> Result<Vec<Trade>, String> {
-            let url = format!("{}/markets/{}/{}/trades", self.base_url, exchange, pair);
+            let url = format!("{}/markets/{}/{}/trades", CW_BASE_URL, exchange, pair);
             request(url).await
         }
 
         pub async fn orderbook(&self, exchange: &str, pair: &str) -> Result<Orderbook, String> {
-            let url = format!("{}/markets/{}/{}/orderbook", self.base_url, exchange, pair);
+            let url = format!("{}/markets/{}/{}/orderbook", CW_BASE_URL, exchange, pair);
             request(url).await
         }
 
-        pub async fn ohlc(&self, exchange: &str, pair: &str) -> Result<HashMap<String, Vec<Candle>>, String> {
-            let url = format!("{}/markets/{}/{}/ohlc", self.base_url, exchange, pair);
+        pub async fn ohlc(
+            &self,
+            exchange: &str,
+            pair: &str,
+        ) -> Result<HashMap<String, Vec<Candle>>, String> {
+            let url = format!("{}/markets/{}/{}/ohlc", CW_BASE_URL, exchange, pair);
             request(url).await
         }
     }
 
     /// A wrapper for the Exchange resource and its operations
-    pub struct ExchangeAPI {
-        base_url: &'static str,
+    pub struct ExchangeAPI {}
+
+    impl HasURI for ExchangeAPI {
+        fn uri(&self) -> String {
+            "exchanges".to_string()
+        }
     }
+
+    impl List<Exchange> for ExchangeAPI {}
+
+    impl Details<Exchange> for ExchangeAPI {}
 
     impl ExchangeAPI {
-        pub(crate) fn new(base_url: &'static str) -> Self {
-            Self { base_url }
-        }
-
-        pub async fn list(&self) -> Result<Vec<Exchange>, String> {
-            let url = format!("{}/exchanges", self.base_url);
-            request(url).await
-        }
-
-        pub async fn detail(&self, name: &str) -> Result<Exchange, String> {
-            let url = format!("{}/exchanges/{}", self.base_url, name);
-            request(url).await
-        }
-
         pub async fn markets(&self, name: &str) -> Result<Vec<Market>, String> {
-            let url = format!("{}/markets/{}", self.base_url, name);
+            let url = format!("{}/markets/{}", CW_BASE_URL, name);
             request(url).await
         }
     }
 
-    async fn http_get<U: IntoUrl>(url: U, ) -> Result<RESTResponse, String> {
+    async fn http_get<U: IntoUrl>(url: U) -> Result<RESTResponse, String> {
         Ok(reqwest::get(url)
             .await
             .expect("Failed get request")
@@ -232,17 +243,15 @@ pub mod rest {
     }
 
     /// Generic helper for HTTP GET and JSON response parsing
-    async fn request<U: IntoUrl, T: DeserializeOwned>(url: U, ) -> Result<T, String> {
+    async fn request<U: IntoUrl, T: DeserializeOwned>(url: U) -> Result<T, String> {
         let resp = http_get(url).await?;
         convert_response(resp)
     }
-
 }
 
 /// Entrypoint for REST API resources
 #[async_trait::async_trait]
 pub trait CryptowatchAPI {
-
     /// Get the PairsAPI
     fn pairs(&self) -> PairsAPI;
 
@@ -287,14 +296,14 @@ impl Default for Cryptowatch {
 #[async_trait::async_trait]
 impl CryptowatchAPI for Cryptowatch {
     fn pairs(&self) -> PairsAPI {
-        PairsAPI { base_url: self.base_url.clone() }
+        PairsAPI {}
     }
 
     fn market(&self) -> MarketAPI {
-        MarketAPI::new(self.base_url.clone())
+        MarketAPI {}
     }
 
     fn exchange(&self) -> ExchangeAPI {
-        ExchangeAPI::new(self.base_url.clone())
+        ExchangeAPI {}
     }
 }
