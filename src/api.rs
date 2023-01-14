@@ -88,6 +88,10 @@ pub mod rest {
                 result: convert_response(resp)?,
             })
         }
+
+        pub async fn details(&self, pair: &str) -> Result<Pair, String> {
+            request(format!("{}/pairs/{}", self.base_url, pair)).await
+        }
     }
 
     /// A wrapper for the Market resource and its operations

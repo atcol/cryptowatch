@@ -39,3 +39,23 @@ async fn test_pairs() {
     assert_ne!(quote2.name , "Wrapped Ether");
     assert!(!quote2.fiat);
 }
+
+
+#[tokio::test]
+async fn test_pair() {
+    let api = Cryptowatch::default();
+    let pair: Pair = api.pairs().details("btcgbp").await.unwrap();
+    assert!(pair.symbol == "btcgbp");
+
+    let base1 = pair.base.as_ref().unwrap();
+    assert_eq!(base1.sid , "bitcoin");
+    assert_eq!(base1.symbol , "btc");
+    assert_eq!(base1.name , "Bitcoin");
+    assert!(!base1.fiat);
+
+    let quote1 = pair.quote.as_ref().unwrap();
+    assert_eq!(quote1.sid , "british-pound");
+    assert_eq!(quote1.symbol , "gbp");
+    assert_eq!(quote1.name , "British Pound");
+    assert!(quote1.fiat);
+}
