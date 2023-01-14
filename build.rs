@@ -11,4 +11,3 @@ fn main() -> Result<()> {
         .compile_protos(&["src/cryptowatch-rest.proto"], &["src/"])?;
     Ok(())
 }
-

@@ -5,7 +5,6 @@ pub mod markets;
 pub mod rest {
     use std::collections::HashMap;
 
-    use async_trait::async_trait;
     use reqwest::IntoUrl;
 
     use self::models::{
@@ -28,6 +27,7 @@ pub mod rest {
             ///     bids: vec![Level { price: 999.,   amount:   1. }]
             /// };
             /// assert_eq!(ob.spread(), Some(1.));
+            /// ```
             pub fn spread(&self) -> Option<f32> {
                 let ask = self.top_ask().map(|a| a.price)?;
                 let bid = self.top_bid().map(|a| a.price)?;
