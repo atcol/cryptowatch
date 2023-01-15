@@ -1,6 +1,6 @@
 use cryptowatch::api::rest::models::{Candle, Market, MarketSummary, Price, Trade};
-use cryptowatch::api::rest::{Details, List, PagedResult};
-use cryptowatch::api::rest::{MarketsResultPage, PricesResultPage};
+use cryptowatch::api::rest::PricesResultPage;
+use cryptowatch::api::rest::{List, PagedResult};
 use cryptowatch::api::{Cryptowatch, CryptowatchAPI};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};

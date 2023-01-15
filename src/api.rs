@@ -148,10 +148,6 @@ pub mod rest {
     }
 
     impl MarketAPI {
-        pub(crate) fn new() -> Self {
-            Self {}
-        }
-
         pub async fn summary(&self, exchange: &str, pair: &str) -> Result<MarketSummary, String> {
             let url = format!("{}/markets/{}/{}/summary", CW_BASE_URL, exchange, pair);
             request(url).await
